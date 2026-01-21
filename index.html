@@ -15,6 +15,7 @@
             overflow: hidden; cursor: default;
         }
 
+        /* --- AMBILIGHT ФОН --- */
         #ambilight-canvas {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 1; filter: blur(100px) brightness(0.4) saturate(1.4);
@@ -27,6 +28,7 @@
             z-index: 2; pointer-events: none;
         }
 
+        /* --- ЭКРАН ВХОДА --- */
         #enter-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; justify-content: center;
@@ -34,7 +36,7 @@
             transition: opacity 0.8s ease;
         }
 
-        /* --- КОНТЕНТ З ПЛАВНИМ ПЕРЕМІЩЕННЯМ --- */
+        /* --- КОНТЕНТ (С ПЛАВНЫМ ПЕРЕМЕЩЕНИЕМ) --- */
         .content-wrapper {
             position: relative; z-index: 10;
             display: flex; flex-direction: column; align-items: center;
@@ -42,7 +44,7 @@
             opacity: 0; 
             transform: translateY(20px) scale(0.85); 
             transition: opacity 1s ease, transform 1s ease, margin-top 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-top: 0; /* Буде змінюватися через JS */
+            margin-top: 100px; /* Изначально опущено вниз */
         }
 
         .avatar {
@@ -62,7 +64,7 @@
 
         /* --- SPOTIFY WIDGET --- */
         .spotify-wrapper {
-            display: none; /* За замовчуванням приховано */
+            display: none; /* Скрыто по умолчанию */
             flex-direction: column; align-items: flex-start;
             margin-bottom: 35px; width: 380px;
             opacity: 0; transform: translateY(-10px);
@@ -86,18 +88,20 @@
         .track-art {
             width: 65px; height: 65px; border-radius: 10px;
             margin-right: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-            object-fit: cover;
+            object-fit: cover; background: #222;
         }
 
         .track-info { display: flex; flex-direction: column; overflow: hidden; text-align: left; }
         .track-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .track-artist { font-size: 13px; color: #1DB954; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+        /* --- СОЦСЕТИ --- */
         .social-row { display: flex; gap: 40px; margin-bottom: 40px; }
         .icon-link { color: #aaa; transition: 0.3s; }
         .icon-link svg { width: 30px; height: 30px; fill: currentColor; }
         .icon-link:hover { color: #fff; transform: scale(1.2); }
 
+        /* --- МЕДИА БЛОК --- */
         .main-media-block { 
             width: 100%; max-width: 800px; position: relative; border-radius: 12px;
             box-shadow: 0 25px 80px rgba(0, 0, 0, 1); 
@@ -107,7 +111,6 @@
             overflow: hidden; background: #000; border: 1px solid rgba(255, 255, 255, 0.1);
         }
         video { width: 100%; display: block; }
-        
         .volume-container {
             width: 100%; height: 0; overflow: hidden; transition: height 0.4s ease;
             display: flex; align-items: center; justify-content: center;
@@ -150,8 +153,8 @@
             <div id="spotify-container">
                 <img id="spotify-art" src="" class="track-art" alt="">
                 <div class="track-info">
-                    <div id="spotify-name" class="track-name">...</div>
-                    <div id="spotify-artist" class="track-artist">...</div>
+                    <div id="spotify-name" class="track-name">Song Name</div>
+                    <div id="spotify-artist" class="track-artist">Artist Name</div>
                 </div>
             </div>
         </div>
@@ -196,20 +199,23 @@
 
                 if (result.success && result.data.listening_to_spotify && result.data.spotify) {
                     const s = result.data.spotify;
-                    document.getElementById('spotify-art').src = s.album_art_url;
-                    // Прямий доступ до полів без "undefined"
-                    document.getElementById('spotify-name').textContent = s.track;
-                    document.getElementById('spotify-artist').textContent = s.artist;
+                    
+                    // СОГЛАСНО ДОКУМЕНТАЦИИ: s.song и s.artist
+                    document.getElementById('spotify-art').src = s.album_art_url || '';
+                    document.getElementById('spotify-name').innerText = s.song || 'Unknown Song';
+                    document.getElementById('spotify-artist').innerText = s.artist || 'Unknown Artist';
                     
                     wrapper.style.display = 'flex';
                     setTimeout(() => wrapper.classList.add('active'), 10);
-                    content.style.marginTop = "0px"; // Піднімаємо контент
+                    content.style.marginTop = "0px"; // Поднимаем контент
                 } else {
                     wrapper.classList.remove('active');
                     setTimeout(() => wrapper.style.display = 'none', 500);
-                    content.style.marginTop = "100px"; // Плавно опускаємо вниз
+                    content.style.marginTop = "100px"; // Опускаем контент
                 }
-            } catch (e) { console.error("API error"); }
+            } catch (e) { 
+                console.error("Fetch Error"); 
+            }
         }
 
         setInterval(updateSpotify, 3000);
@@ -228,17 +234,20 @@
                 enterScreen.style.display = 'none';
                 content.classList.add('visible-content');
                 ambCanvas.width = 64; ambCanvas.height = 64;
-                video.muted = false; video.play().then(() => {
+                video.muted = false; video.volume = 0.5;
+                video.play().then(() => {
                     ambCanvas.style.opacity = "1";
                     drawAmbilight();
                 });
             }, 800);
         }
 
-        document.getElementById('volume-slider').addEventListener('input', (e) => { video.volume = e.target.value; });
+        document.getElementById('volume-slider').addEventListener('input', (e) => { 
+            video.volume = e.target.value; 
+        });
 
         document.querySelectorAll('.icon-link').forEach(link => {
-            link.addEventListener('mouseenter', (e) => {
+            link.addEventListener('mouseenter', () => {
                 const tip = document.getElementById('custom-tooltip');
                 tip.innerText = link.getAttribute('data-tip');
                 tip.style.opacity = '1';
